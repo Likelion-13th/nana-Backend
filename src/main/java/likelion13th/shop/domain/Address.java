@@ -15,10 +15,10 @@ public class Address {
     private String zipcode;
 
     @Column(nullable = false)
-    private String address; //
+    private String address;
 
     @Column(nullable = false)
-    private String addressDetail; //
+    private String addressDetail;
 
     public Address() {
         this.zipcode = "10540";
@@ -26,3 +26,6 @@ public class Address {
         this.addressDetail = "한국항공대학교";
     }
 }
+
+// 우편 번호, 주소, 상세 주소를 멤버로 갖는 객체를 따로 선언한 파일임
+// 주소가 유저 테이블 안에 들어가 있는 거라서 관계 코드가 없음
