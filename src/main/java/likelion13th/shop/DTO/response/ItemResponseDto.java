@@ -28,3 +28,6 @@ public class ItemResponseDto {
         );
     }
 }
+
+// 아이템 정보 응답용 DTO임
+// 아이템 id, 이름, 가격, 브랜드 등 보여주기 위해 만든 클래스
