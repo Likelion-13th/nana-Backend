@@ -46,7 +46,7 @@ jobs:
           cp Procfile deploy/Procfile
           cp -r .ebextensions_dev deploy/.ebextensions
           cp -r .platform deploy/.platform
-          cd deploy && zip -r deploy zip .
+          cd deploy && zip -r deploy.zip .
 
       - name: Deploy to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v20
@@ -56,6 +56,6 @@ jobs:
           application_name: 'sajang-dev'
           environment_name: 'SAJANG-dev-env'
           version_label: github-action-${{steps.current-time.outputs.formattedTime}}
-          regin: 'ap-northeast-2'
+          region: 'ap-northeast-2'
           deployment_package: 'deploy/deploy.zip'
           wait_for_deployment: false
