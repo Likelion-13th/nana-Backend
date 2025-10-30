@@ -42,10 +42,10 @@ jobs:
       - name: Generate deployment package
         run: |
           mkdir -p deploy
-          cd build/libs/*.jar deploy/application.jar
-          cd Profile deploy/Profile
-          cd -r .ebextensions_dev deploy/.ebextensions
-          cd -r .platform deploy/.platform
+          cp build/libs/*.jar deploy/application.jar
+          cp Profile deploy/Profile
+          cp -r .ebextensions_dev deploy/.ebextensions
+          cp -r .platform deploy/.platform
           cd deploy && zip -r deploy zip .
 
       - name: Deploy to Elastic Beanstalk
