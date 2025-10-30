@@ -1,33 +1,40 @@
 package likelion13th.shop.DTO.response;
 
+
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import likelion13th.shop.domain.Item;
-import likelion13th.shop.global.constant.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-
-import java.time.LocalDateTime;
+import lombok.NoArgsConstructor;
 
 @Getter
 @AllArgsConstructor
-public class ItemResponseDto {
-    private Long item_id;
-    private String item_name;
+@NoArgsConstructor
+public class ItemResponse {
+    private Long id;
+    private String name;
     private int price;
-    private String imagePath;
     private String brand;
+    private String imagePath;
     private boolean isNew;
 
-    public static ItemResponseDto from(Item item){
-        return new ItemResponseDto(
+    @JsonProperty("isNew")
+    public boolean getIsNew() {
+        return isNew;
+    }
+
+    // Item → ItemResponseDto 변환
+    public static ItemResponse from(Item item) {
+        return new ItemResponse(
                 item.getId(),
-                item.getItem_name(),
+                item.getItemName(),
                 item.getPrice(),
-                item.getImagePath(),
                 item.getBrand(),
+                item.getImagePath(),
                 item.isNew()
         );
     }
 }
-
 // 아이템 정보 응답용 DTO임
 // 아이템 id, 이름, 가격, 브랜드 등 보여주기 위해 만든 클래스

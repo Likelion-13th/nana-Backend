@@ -1,24 +1,18 @@
 package likelion13th.shop.DTO.response;
 
 import likelion13th.shop.domain.Address;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-@AllArgsConstructor
-@Builder
 public class AddressResponse {
     private String zipcode;
     private String address;
     private String addressDetail;
 
-    public static AddressResponse from(Address address) {
-        return AddressResponse.builder()
-                .zipcode(address.getZipcode())
-                .address(address.getAddress())
-                .addressDetail(address.getAddressDetail())
-                .build();
+    public AddressResponse(Address address) {
+        this.zipcode = address.getZipcode();
+        this.address = address.getAddress();
+        this.addressDetail = address.getAddressDetail();
     }
 }
 

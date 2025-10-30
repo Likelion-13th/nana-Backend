@@ -1,23 +1,26 @@
 package likelion13th.shop.DTO.response;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import likelion13th.shop.domain.Order;
 import likelion13th.shop.global.constant.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Getter
+@NoArgsConstructor
 @AllArgsConstructor
 public class OrderResponseDto {
     private Long orderId;
     private String usernickname;
-    private String item_name;
+    private String itemName;
     private int quantity;
     private int totalPrice;
     private int finalPrice;
-    private int mileageToUse; //사용한 마일리지
+    private int mileageToUse;
     private OrderStatus status;
     private LocalDateTime createdAt;
 

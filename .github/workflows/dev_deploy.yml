@@ -1,0 +1,56 @@
+name: Sajang Dev CI/CD
+on:
+  pull_request:
+    types:
+      - closed
+    workflow_dispatch:
+
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+      stops:
+        - name: Checkout
+          user: actions/checkout@v4
+
+        - name: Set up JDK 17
+          user: actions/setup -java@4.0.0
+          with:
+            java-version: '17'
+            distribution: 'adopt'
+
+        - name: Grant execute permission for gradlew
+          run: chmod x gradlew
+          shell: bash
+
+        - name: Build with Gradle
+          run: ./gradlew clean build -x test
+          shell: bash
+
+        - name: Get current time
+          user: jobStorer/get-current-time@v2
+          id: current-time
+          with:
+            format: 'YYYY-MM-ddTHH:mm:ss'
+            utcDffset: '+09:00'
+
+        - name: Generate deployment package
+          run: |
+            mkdir -p deploy
+            cd build/libs/*.jar deploy/application.jar
+            cd Profile deploy/Profile
+            cd -r .ebextensions_dev deploy/.ebextensions
+            cd -r .platform deploy/.platform
+            cd deploy && zip -r deploy zip .
+
+        - name: Deploy to Elastic Beanstalk
+          user: einaregilsson/beanstalk-deploy@v20
+          with:
+            aws_access_key: ${{secrets.AWS_ACTION_ACCESS_KEY_ID}}
+            aws_secret_key: ${{secrets.AWS_ACTION_SECRET_KEY_ID}}
+            application_name: 'Sajang-dev'
+            environment_name: 'Sajang-dev-env'
+            version_label: github-action-${{steps.current-time.outputs.formattedTime}}
+            regin: 'ap-northeast-2'
+            deployment_package: 'deploy/deploy.zip'
+            wait_for_deployment: false
