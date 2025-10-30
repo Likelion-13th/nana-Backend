@@ -1,4 +1,4 @@
-name: Sajang Dev CI/CD
+name: Sajang Dev CI/CD2
 on:
   pull_request:
     types:
