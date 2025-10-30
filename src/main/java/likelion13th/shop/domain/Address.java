@@ -17,7 +17,7 @@ public class Address {
     @Column(nullable = false)
     private String address;
 
-    @Column(nullable = false)
+    @Column(name = "address_detail", nullable = false)
     private String addressDetail;
 
     public Address() {

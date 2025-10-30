@@ -1,8 +1,7 @@
 package likelion13th.shop.domain;
 
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import likelion13th.shop.domain.entity.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,25 +10,24 @@ import lombok.Setter;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity //DB 한 줄
-@Getter //get함수 항상 쓰기 귀찮으니 전역 딸깍
-@Table(name = "Category") //예약어 회피
+@Entity
+@Getter
+@Table(name = "category")
 @NoArgsConstructor
-
-public class Category extends BaseEntity{
+public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "category_id")
     @Setter(AccessLevel.PRIVATE)
     private Long id;
 
-    @Column(nullable = false)
-    private String category_name;
+    @Column(name = "category_name", nullable = false)
+    private String name;
 
-    @ManyToMany(mappedBy = "catefories")
+    // Item과 다대다 연관관계 설정
+    @ManyToMany
+    @JsonIgnore //무한 루프 방지  (카테고리 내부에서 items 목록을 JSON 변환에서 제외)
+    @JoinTable(name = "category_item", //중간 테이블 자동으로 생성
+            joinColumns = @JoinColumn(name = "category_id"),
+            inverseJoinColumns = @JoinColumn(name = "item_id"))
     private List<Item> items = new ArrayList<>();
-
-    public Category(String category_name) {
-        this.category_name = category_name;
-    }
 }
