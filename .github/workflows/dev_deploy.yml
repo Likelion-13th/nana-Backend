@@ -1,4 +1,5 @@
 name: Sajang Dev CI/CD
+
 on:
   pull_request:
     types:
@@ -8,7 +9,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'develop'
+    # develop branch로 pr 요청되고 merge가 되면 작동
+
+    # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    # 만약 main branch로 작업하고 있다면, 아래와 같이 설정하고 진행
 
     steps:
       - name: Checkout
@@ -51,11 +56,11 @@ jobs:
       - name: Deploy to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v20
         with:
-          aws_access_key: ${{secrets.AWS_ACTION_ACCESS_KEY_ID}}
-          aws_secret_key: ${{secrets.AWS_ACTION_SECRET_KEY_ID}}
+          aws_access_key: ${{ secrets.AWS_ACTION_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_ACTION_SECRET_ACCESS_KEY }}
           application_name: 'sajang-dev'
-          environment_name: 'SAJANG-dev-env'
-          version_label: github-action-${{steps.current-time.outputs.formattedTime}}
+          environment_name: 'Sajang-dev-env'
+          version_label: github-action-${{ steps.current-time.outputs.formattedTime }}
           region: 'ap-northeast-2'
           deployment_package: 'deploy/deploy.zip'
           wait_for_deployment: false
