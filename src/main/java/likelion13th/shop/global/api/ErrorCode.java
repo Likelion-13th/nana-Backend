@@ -10,6 +10,7 @@ public enum ErrorCode implements BaseCode { // 실패
     // Common
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_400", "잘못된 요청입니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_500", "서버 에러, 서버 개발자에게 문의하세요."),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "COMMON_400", "인증되지 않은 요청입니다."),
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_4041", "존재하지 않는 회원입니다."),
@@ -22,7 +23,8 @@ public enum ErrorCode implements BaseCode { // 실패
     USER_ORDERS_EMPTY(HttpStatus.NOT_FOUND, "USER_4043", "사용자의 주문 내역이 없습니다."),
     USER_ORDER_STATUS_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_4044", "해당 주문이 없습니다."),
 
-    INVALID_MILEAGE(HttpStatus.BAD_REQUEST, "USER_4045", "마일리지 쓸 수 없으셈"),
+    INVALID_MILEAGE(HttpStatus.BAD_REQUEST, "USER_4045", "보유한 마일리지를 초과하여 사용 및 회수 할 수 없습니다."),
+
     // Jwt
     WRONG_REFRESH_TOKEN(HttpStatus.NOT_FOUND, "JWT_4041", "일치하는 리프레시 토큰이 없습니다."),
     IP_NOT_MATCHED(HttpStatus.FORBIDDEN, "JWT_4031", "리프레시 토큰의 IP주소가 일치하지 않습니다."),
@@ -49,7 +51,6 @@ public enum ErrorCode implements BaseCode { // 실패
 
     // User Address 관련 에러 코드 추가
     ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "ADDRESS_4041", "해당 사용자의 주소 정보를 찾을 수 없습니다.");
-
 
     private final HttpStatus httpStatus;
     private final String code;
