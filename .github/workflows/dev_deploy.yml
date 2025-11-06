@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'develop'
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     # develop branch로 pr 요청되고 merge가 되면 작동
 
     # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
