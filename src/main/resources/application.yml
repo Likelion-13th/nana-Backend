@@ -3,80 +3,68 @@ spring:
   profiles:
     active: local
 
-# Swagger
-springdoc:
-  swagger-ui:
-    path: /swagger
-    display-request-duration: true
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  cors:
-    enabled: true
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${KAKAO_REST_API_KEY}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            #redirect-uri: http://localhost:8080/login/oauth2/code/kakao
+            redirect-uri: http://Sajang-dev-env.eba-cxzcfs22.ap-northeast-2.elasticbeanstalk.com/login/oauth2/code/kakao
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+            scope:
+              - profile_nickname
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
 
-    # 스프링 MVC의 파일 업로드 관련 설정
-    servlet:
-      multipart:
-        enabled: true # 뭘티 파트 요청을 파일 업로드로 읽히도록
-        max-file-size: 50MB  # 파일 하나의 최대 크기 -> 넘으면 413
-        max-request-size: 60MB # 요청 전체 크기 -> 넘으면 413
 
-
-    security:
-      oauth2:
-        client:
-          registration:
-            kakao:
-              client-id: ${KAKAO_REST_API_KEY}
-              client-secret: ${KAKAO_CLIENT_SECRET}
-              redirect-uri: http://sajang-dev-env.eba-cxzcfs22.ap-northeast-2.elasticbeanstalk.com/
-              # redirect-uri: 나중에백엔드배포주소넣어주세요:)/login/oauth2/code/kakao
-              authorization-grant-type: authorization_code
-              client-authentication-method: client_secret_post
-              scope:
-                - profile_nickname
-          provider:
-            kakao:
-              authorization-uri: https://kauth.kakao.com/oauth/authorize
-              token-uri: https://kauth.kakao.com/oauth/token
-              user-info-uri: https://kapi.kakao.com/v2/user/me
-              user-name-attribute: id
-
-  JWT_SECRET: ${JWT_SECRET}
-  JWT_EXPIRATION: ${JWT_EXPIRATION}                  # Access(ms)
-  JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}  # Refresh(ms)
+#로그인 토큰
+jwt:
+  secret: ${JWT_SECRET}
+  accessExpirationTime: ${JWT_EXPIRATION}
+  refreshExpirationTime: ${JWT_REFRESH_EXPIRATION}
 
   #S3
-  cloud:
-    aws:
-      access-key: ${AWS_ACCESS_KEY:default-access-key}
-      secret-key: ${AWS_SECRET_KEY:default-secret-key}
-      region: ap-southeast-2
-      bucket: ${AWS_BUCKET:default-bucket}
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 60MB
 
-  server:
-    tomcat:
-      max-swallow-size: -1         # -1 = 무제한
-      max-http-form-post-size: -1
+cloud:
+  aws:
+    access-key: ${AWS_ACCESS_KEY:default-access-key}
+    secret-key: ${AWS_SECRET_KEY:default-secret-key}
+    region: ${AWS_REGION:ap-northeast-2}
+    bucket: ${AWS_BUCKET:default-bucket}
 
-  #Swagger
-  springdoc:
-    api-docs:
-      path: /v3/api-docs
-      # Swagger의 OpenAPI 명세를 제공하는 경로 설정
-    swagger-ui:
-      path: /swagger-ui.html
-      # Swaggerd UI 표시할 URL 경로 설정
-      display-request-duration: true # 요청이 안료되는 데 걸린 시간 표시 여부
-      operations-sorter: method # 메서드 이름 기준으로 API 정렬
+sever:
+  tomcat:
+    max-swallow-size: -1
+    max-http-form-post-size: -1
 
-      #aws도 해야함
+#Swagger
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    # Swagger의 OpenAPI 명세를 제공하는 경로 설정
+  swagger-ui:
+    path: /swagger-ui.html
+    # Swaggerd UI 표시할 URL 경로 설정
+    display-request-duration: true # 요청이 안료되는 데 걸린 시간 표시 여부
+    operations-sorter: method # 메서드 이름 기준으로 API 정렬
 
 ---
-
+# local profile
 spring:
   config:
-    active:
+    activate:
       on-profile: local
   datasource:
     url: ${local.db.url}
@@ -89,11 +77,29 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
     properties:
       dialect: org.hibernate.dialect.MySQLDialect
       use_sql_comments: true
       default_batch_fetch_size: 1000
-      hibernate:
-        format_sql: true
 
+---
+# develop profile
+spring:
+  config:
+    activate:
+      on-profile: develop
+  datasource:
+    url: ${aws.db.url}
+    username: ${aws.db.username}
+    password: ${aws.db.password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: never
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      dialect: org.hibernate.dialect.MySQLDialect
+      use_sql_comments: true
+      default_batch_fetch_size: 1000
