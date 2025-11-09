@@ -7,6 +7,7 @@ import likelion13th.shop.login.auth.utils.OAuth2UserServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,59 +30,55 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // CSRF 비활성화
-                .csrf(AbstractHttpConfigurer::disable)
+                // ✅ CSRF: JWT 기반이라 전체 비활성화 대신 로그아웃만 예외 처리
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/users/logout"))
 
-                // CORS 설정 적용
+                // ✅ CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 인증 및 권한 설정
+                // ✅ 인가 규칙
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/health", // health check
-
-                                "/swagger-ui/**",         // Swagger
+                                "/health",
+                                "/swagger-ui/**",
                                 "/v3/api-docs/**",
-
-                                "/users/reissue",         // 토큰 재발급
-                                "/users/logout",          // 로그아웃
-
-                                "/token/**",              // 토큰 재발급 및 생성
-                                "/oauth2/**",             // 카카오 OAuth 리디렉션
-                                "/login/oauth2/**",        // 카카오 OAuth 콜백
-
-                                "/categories/**",         //  로그인 없이 카테고리 조회 가능
-                                "/items/**"               //  로그인 없이 상품 조회 가능
+                                "/users/reissue",
+                                "/token/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
+                                "/categories/**",
+                                "/items/**"
                         ).permitAll()
+                        // 프리플라이트 허용
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // ✅ 로그아웃은 인증 필요 (JWT 필터가 토큰 검증 후 SecurityContext 셋업)
+                        .requestMatchers(HttpMethod.DELETE, "/users/logout").authenticated()
                         .anyRequest().authenticated()
                 )
-                // 세션 정책: STATELESS (JWT 기반)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // OAuth2 로그인 설정 (UserService 연동)
+                // ✅ 세션: STATELESS
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // ✅ OAuth2 로그인
                 .oauth2Login(oauth2 -> oauth2
                         //.loginPage("/users/login")
                         .successHandler(oAuth2SuccessHandler)
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(oAuth2UserService))
+                        .userInfoEndpoint(u -> u.userService(oAuth2UserService))
                 )
 
-                // 필터 체인 적용
+                // ✅ 필터 체인 (생성 → 검증 순서 주의)
                 .addFilterBefore(authCreationFilter, AnonymousAuthenticationFilter.class)
                 .addFilterBefore(jwtValidationFilter, AuthCreationFilter.class);
-
 
         return http.build();
     }
 
-    // CORS 설정
+    // ✅ CORS 설정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
-                // "아기 사자 백엔드 배포 주소",
                 "https://nana-frontend.netlify.app/"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
