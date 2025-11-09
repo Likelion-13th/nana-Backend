@@ -55,7 +55,7 @@ springdoc:
     path: /v3/api-docs
     # Swagger의 OpenAPI 명세를 제공하는 경로 설정
   swagger-ui:
-    path: /swagger-ui.html
+    path: /swagger-ui/index.html
     # Swaggerd UI 표시할 URL 경로 설정
     display-request-duration: true # 요청이 안료되는 데 걸린 시간 표시 여부
     operations-sorter: method # 메서드 이름 기준으로 API 정렬
