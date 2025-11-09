@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RequestMapping("/users")
 public class UserController{
-    private UserService userService;
+    private final UserService userService;
 
     @Operation(summary = "토큰 재발급", description = "~이다 ~이가")
     @ApiResponses(value = {
