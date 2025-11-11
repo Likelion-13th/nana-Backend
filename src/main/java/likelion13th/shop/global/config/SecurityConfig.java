@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.http.HttpMethod; // ★ added
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -38,6 +39,9 @@ public class SecurityConfig {
 
                 // 인가 규칙
                 .authorizeHttpRequests(auth -> auth
+                        // ★ added: 프리플라이트(OPTIONS) 전부 허용
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         .requestMatchers(
                                 "/health",
                                 "/swagger-ui/**",
@@ -47,7 +51,9 @@ public class SecurityConfig {
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/categories/**",
-                                "/items/**"
+                                "/items/**",
+                                // ★ added: 스웨거에서 토큰 발급 테스트 시 401/403 방지
+                                "/token/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -73,19 +79,35 @@ public class SecurityConfig {
     // CORS 설정 Bean
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "https://nana-frontend.netlify.app/",
-                "http://localhost:8080"
+        CorsConfiguration config = new CorsConfiguration();
+
+        // 브라우저 쿠키/인증정보 포함 허용
+        config.setAllowCredentials(true);
+
+        // ★ changed: setAllowedOriginPatterns 사용 (credentials=true와 호환되며 와일드카드/서브도메인 허용)
+        config.setAllowedOriginPatterns(Arrays.asList(
+                "http://localhost:3000", // 로컬 프론트
+                "http://localhost:8080", // 로컬 스웨거
+                // EB 스웨거/API (HTTP)
+                "http://sajang-dev-env.eba-cxzcfs22.ap-northeast-2.elasticbeanstalk.com",
+                // 배포 프론트 (넷리파이 계열 전반 허용; 필요 시 정확한 도메인으로 좁히세요)
+                "https://*.netlify.app",
+                // 선택: 커스텀 도메인 사용 중이면 추가 (없으면 제거 가능)
+                "https://valuebid.site"
         ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+
+        // 허용 헤더/메서드 넉넉히 개방
+        config.addAllowedHeader("*"); // Authorization, Content-Type 포함
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+        // 노출 헤더(필요 시)
+        config.setExposedHeaders(Arrays.asList("Authorization", "Location", "Link"));
+
+        // 프리플라이트 캐시
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }
