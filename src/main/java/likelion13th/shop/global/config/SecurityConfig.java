@@ -21,6 +21,7 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 @Configuration
 public class SecurityConfig {
+
     private final AuthCreationFilter authCreationFilter;
     private final JwtValidationFilter jwtValidationFilter;
     private final OAuth2UserServiceImpl oAuth2UserService;
@@ -32,56 +33,49 @@ public class SecurityConfig {
                 // CSRF 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // CORS 설정 적용
+                // CORS 적용
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 인증 및 권한 설정
+                // 인가 규칙
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/health", // health check
-
-                                "/swagger-ui/**",         // Swagger
+                                "/health",
+                                "/swagger-ui/**",
                                 "/v3/api-docs/**",
-
-                                "/users/reissue",         // 토큰 재발급
-                                "/users/logout",          // 로그아웃
-
-                                "/token/**",              // 토큰 재발급 및 생성
-                                "/oauth2/**",             // 카카오 OAuth 리디렉션
-                                "/login/oauth2/**",        // 카카오 OAuth 콜백
-
-                                "/categories/**",         //  로그인 없이 카테고리 조회 가능
-                                "/items/**"               //  로그인 없이 상품 조회 가능
+                                "/users/reissue",
+                                "/users/logout",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
+                                "/categories/**",
+                                "/items/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                // 세션 정책: STATELESS (JWT 기반)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // OAuth2 로그인 설정 (UserService 연동)
-                .oauth2Login(oauth2 -> oauth2
-                        //.loginPage("/users/login")
-                        .successHandler(oAuth2SuccessHandler)
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(oAuth2UserService))
+                // 세션 비활성화 (JWT)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // 필터 체인 적용
+                // OAuth2 로그인
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2SuccessHandler)
+                        .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2UserService))
+                )
+
+                // 필터 체인
                 .addFilterBefore(authCreationFilter, AnonymousAuthenticationFilter.class)
                 .addFilterBefore(jwtValidationFilter, AuthCreationFilter.class);
-
 
         return http.build();
     }
 
-    // CORS 설정
+    // CORS 설정 Bean
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
-                // "아기 사자 백엔드 배포 주소",
                 "https://nana-frontend.netlify.app/"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
