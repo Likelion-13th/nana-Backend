@@ -127,7 +127,7 @@ public class UserService {
 
         Claims claims = tokenProvider.parseClaims(accessToken);
         String providerId = claims.getSubject();
-        if ((providerId != null || providerId.isEmpty())) {
+        if (providerId == null || providerId.isEmpty()) {
             throw new GeneralException(ErrorCode.TOKEN_INVALID);
         }
 
