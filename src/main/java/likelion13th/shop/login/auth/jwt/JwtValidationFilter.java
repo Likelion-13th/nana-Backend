@@ -30,22 +30,21 @@ public class JwtValidationFilter extends OncePerRequestFilter {
 
     private final TokenProvider tokenProvider;
 
-    /**
-     * 특정 경로는 JWT 검증을 건너뛴다.
-     * (로그아웃/재발급/스웨거/OAuth 등)
-     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
+        log.debug("[JwtValidationFilter] shouldNotFilter check: {}", uri);
+
         if (uri == null) return false;
 
-        return uri.startsWith("/users/reissue")   // 토큰 재발급
-                || uri.startsWith("/users/logout") // 로그아웃
-                || uri.startsWith("/oauth2")       // OAuth2 시작
-                || uri.startsWith("/login/oauth2") // OAuth2 콜백
-                || uri.startsWith("/swagger-ui")   // Swagger UI
-                || uri.startsWith("/v3/api-docs")  // Swagger Docs
-                || uri.startsWith("/health");      // 헬스 체크
+        // ✅ 경로 앞에 /api 같은 prefix가 붙어도 통과되게 처리
+        return uri.contains("/users/reissue")
+                || uri.contains("/users/logout")
+                || uri.contains("/oauth2")
+                || uri.contains("/login/oauth2")
+                || uri.contains("/swagger-ui")
+                || uri.contains("/v3/api-docs")
+                || uri.contains("/health");
     }
 
     @Override
@@ -54,14 +53,12 @@ public class JwtValidationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // 이미 인증이 설정되어 있으면 그대로 진행
         Authentication existing = SecurityContextHolder.getContext().getAuthentication();
         if (existing != null && existing.isAuthenticated() && !(existing instanceof AnonymousAuthenticationToken)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Authorization 헤더 확인
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -81,12 +78,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
 
             var authorities = tokenProvider.getAuthFromClaims(claims);
 
-            CustomUserDetails userDetails = new CustomUserDetails(
-                    providerId,
-                    "",
-                    authorities
-            );
-
+            CustomUserDetails userDetails = new CustomUserDetails(providerId, "", authorities);
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
@@ -94,19 +86,14 @@ public class JwtValidationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (io.jsonwebtoken.security.SecurityException | MalformedURLException e) {
-            // 잘못된 서명/형식
             sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
         } catch (ExpiredJwtException e) {
-            // 토큰 만료
             sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
         } catch (UnsupportedJwtException e) {
-            // 지원하지 않는 형식
             sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
         } catch (IllegalArgumentException e) {
-            // 널/공백 등 잘못된 입력
             sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
         } catch (Exception e) {
-            // 예기치 못한 오류
             sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
         }
     }
@@ -114,7 +101,6 @@ public class JwtValidationFilter extends OncePerRequestFilter {
     private void sendErrorResponse(HttpServletResponse response, ErrorCode errorCode) throws IOException {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        // 기존 정책 유지: 401 반환
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.getWriter().write(
                 new ObjectMapper().writeValueAsString(ApiResponse.onFailure(errorCode, null))
