@@ -12,7 +12,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
-import org.springframework.http.HttpMethod; // ★ added
+import org.springframework.http.HttpMethod;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,30 +31,33 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // CSRF 비활성화
+                // === 보안 기본 설정 ===
                 .csrf(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable) // ✅ Spring 기본 /logout 비활성화 (우리 컨트롤러 사용)
 
-                // CORS 적용
+                // CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // 인가 규칙
                 .authorizeHttpRequests(auth -> auth
-                        // ★ added: 프리플라이트(OPTIONS) 전부 허용
+                        // 프리플라이트 허용
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        // 공개 엔드포인트
                         .requestMatchers(
                                 "/health",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/users/reissue",
-                                "/users/logout",
+                                // "/users/logout",  // ⛔ 인증 기반 로그아웃이면 permitAll에서 제외
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/categories/**",
                                 "/items/**",
-                                // ★ added: 스웨거에서 토큰 발급 테스트 시 401/403 방지
                                 "/token/**"
                         ).permitAll()
+
+                        // 그 외는 인증 필요
                         .anyRequest().authenticated()
                 )
 
@@ -81,29 +84,17 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // 브라우저 쿠키/인증정보 포함 허용
         config.setAllowCredentials(true);
-
-        // ★ changed: setAllowedOriginPatterns 사용 (credentials=true와 호환되며 와일드카드/서브도메인 허용)
         config.setAllowedOriginPatterns(Arrays.asList(
-                "http://localhost:3000", // 로컬 프론트
-                "http://localhost:8080", // 로컬 스웨거
-                // EB 스웨거/API (HTTP)
+                "http://localhost:3000",
+                "http://localhost:8080",
                 "http://sajang-dev-env.eba-cxzcfs22.ap-northeast-2.elasticbeanstalk.com",
-                // 배포 프론트 (넷리파이 계열 전반 허용; 필요 시 정확한 도메인으로 좁히세요)
                 "https://*.netlify.app",
-                // 선택: 커스텀 도메인 사용 중이면 추가 (없으면 제거 가능)
                 "https://valuebid.site"
         ));
-
-        // 허용 헤더/메서드 넉넉히 개방
-        config.addAllowedHeader("*"); // Authorization, Content-Type 포함
+        config.addAllowedHeader("*");
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-
-        // 노출 헤더(필요 시)
         config.setExposedHeaders(Arrays.asList("Authorization", "Location", "Link"));
-
-        // 프리플라이트 캐시
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
