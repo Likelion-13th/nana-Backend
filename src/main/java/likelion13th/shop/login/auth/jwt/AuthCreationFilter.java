@@ -27,20 +27,15 @@ public class AuthCreationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        // 현재 로직: /users/reissue 에서만 동작시키고 나머지는 모두 스킵
-        // 필요 시 다른 리프레시 엔드포인트도 추가 가능
         String uri = request.getRequestURI();
         if (uri == null) return true;
 
-        // [ADD] 프리플라이트 무조건 패스
+        // ✅ 프리플라이트 무조건 패스
         if (HttpMethod.OPTIONS.matches(request.getMethod())) return true;
 
-        // [FIX] 명시적으로 "동작시킬 경로"만 허용 (그 외는 스킵)
-        boolean enabled = "/users/reissue".equals(uri)
-                // || uri.startsWith("/auth/refresh")    // 필요시 주석 해제
-                ;
+        // ✅ /users/reissue만 실행, 나머지는 스킵
+        boolean enabled = "/users/reissue".equals(uri);
         if (!enabled) {
-            // [ADD] 디버깅 로그
             log.debug("[AuthCreationFilter] SKIP uri={}", uri);
             return true;
         }
@@ -48,13 +43,12 @@ public class AuthCreationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
 
-        Authentication existing = SecurityContextHolder.getContext().getAuthentication(); // [FIX] 변수명 오타 수정
+        Authentication existing = SecurityContextHolder.getContext().getAuthentication();
         if (existing != null && existing.isAuthenticated()
                 && !(existing instanceof AnonymousAuthenticationToken)) {
             filterChain.doFilter(request, response);
@@ -67,15 +61,14 @@ public class AuthCreationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // [FIX] "Bearer " 공백 포함 길이 7
-        String token = authHeader.substring(7);
+        String token = authHeader.substring(7); // ✅ Bearer 공백 포함
 
         String providerId;
         try {
             Claims claims = tokenProvider.parseClaimsAllowExpired(token);
             providerId = claims.getSubject();
         } catch (Exception e) {
-            log.debug("[AuthCreationFilter] token parse failed: {}", e.toString()); // [ADD]
+            log.debug("[AuthCreationFilter] token parse failed: {}", e.toString());
             filterChain.doFilter(request, response);
             return;
         }
@@ -86,8 +79,7 @@ public class AuthCreationFilter extends OncePerRequestFilter {
         }
 
         var anonymousAuthorities = java.util.Collections.singletonList(
-                // [FIX] ROLE 접두어 및 이상한 기호 제거
-                new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ANONYMOUS")
+                new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ANONYMOUS") // ✅ 수정
         );
 
         var preAuth = new org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken(

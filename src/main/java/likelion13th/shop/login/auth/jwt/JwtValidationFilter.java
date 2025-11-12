@@ -1,12 +1,7 @@
 package likelion13th.shop.login.auth.jwt;
 
-// package likelion13th.shop.login.auth.jwt;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.*;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,31 +31,27 @@ public class JwtValidationFilter extends OncePerRequestFilter {
     private static final AntPathMatcher PATH = new AntPathMatcher();
 
     private static final String[] SKIP_PATHS = new String[] {
-            "/oauth2/**",
+            "/",
+            "/favicon.ico",       // ✅ 파비콘도 스킵
+            "/error",
+            "/oauth2/**",         // ✅ 로그인 시작/콜백
             "/login/oauth2/**",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/health",
-            "/error",
-            "/favicon.ico",
-            "/",
-            // 필요 시 여기에 공개 경로 추가
-            // "/users/logout"
+            "/health"
     };
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        final String uri = request.getRequestURI();
+        String uri = request.getRequestURI();
         if (uri == null) return false;
 
         // ✅ 프리플라이트는 무조건 패스
         if (HttpMethod.OPTIONS.matches(request.getMethod())) return true;
 
-        // ✅ 공개 경로 패턴은 패스
         for (String p : SKIP_PATHS) {
             if (PATH.match(p, uri)) {
-                // [ADD] 디버깅 로그
-                log.debug("[JwtValidationFilter] SKIP by pattern: {}", p);
+                log.debug("[JwtValidationFilter] SKIP path: {}", uri);
                 return true;
             }
         }
@@ -76,7 +67,6 @@ public class JwtValidationFilter extends OncePerRequestFilter {
         final String uri = request.getRequestURI();
         log.debug("[JwtValidationFilter] 요청 URI = {}", uri);
 
-        // 이미 인증되어 있으면 통과
         Authentication existing = SecurityContextHolder.getContext().getAuthentication();
         if (existing != null && existing.isAuthenticated()
                 && !(existing instanceof AnonymousAuthenticationToken)) {
@@ -84,15 +74,13 @@ public class JwtValidationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Authorization 헤더가 없으면 -> 그냥 통과 (인가 여부는 Security 규칙이 처리)
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.debug("[JwtValidationFilter] Authorization 헤더 없음/형식 불일치. uri={}", uri);
             filterChain.doFilter(request, response);
             return;
         }
 
-        // [FIX] "Bearer " 공백 포함 길이 7
+        // ✅ Bearer 공백 포함
         String token = authHeader.substring(7);
 
         try {
@@ -100,7 +88,6 @@ public class JwtValidationFilter extends OncePerRequestFilter {
             String providerId = claims.getSubject();
 
             if (providerId == null || providerId.isEmpty()) {
-                log.warn("[JwtValidationFilter] providerId 비어 있음. uri={}", uri);
                 sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
                 return;
             }
@@ -111,26 +98,11 @@ public class JwtValidationFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            log.debug("[JwtValidationFilter] 토큰 검증 성공: providerId={}, 권한={}", providerId, authorities);
-            filterChain.doFilter(request, response);
+            log.debug("[JwtValidationFilter] 토큰 검증 성공: providerId={}", providerId);
 
-        } catch (ExpiredJwtException e) {
-            log.error("[JwtValidationFilter] 토큰 만료: {}", e.getMessage());
-            sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
-        } catch (io.jsonwebtoken.security.SecurityException e) {
-            log.error("[JwtValidationFilter] 잘못된 서명: {}", e.getMessage());
-            sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
-        } catch (MalformedJwtException e) {
-            log.error("[JwtValidationFilter] JWT 형식 오류: {}", e.getMessage());
-            sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
-        } catch (UnsupportedJwtException e) {
-            log.error("[JwtValidationFilter] 지원하지 않는 JWT 형식: {}", e.getMessage());
-            sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
-        } catch (IllegalArgumentException e) {
-            log.error("[JwtValidationFilter] 잘못된 인자/공백 토큰: {}", e.getMessage());
-            sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
-        } catch (Exception e) {
-            log.error("[JwtValidationFilter] 알 수 없는 오류 발생: {}", e.getMessage(), e);
+            filterChain.doFilter(request, response);
+        } catch (JwtException e) {
+            log.error("[JwtValidationFilter] JWT 오류: {}", e.getMessage());
             sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
         }
     }

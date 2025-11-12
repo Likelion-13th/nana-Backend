@@ -1,7 +1,5 @@
 package likelion13th.shop.global.config;
 
-// package likelion13th.shop.global.config;
-
 import likelion13th.shop.login.auth.jwt.AuthCreationFilter;
 import likelion13th.shop.login.auth.jwt.JwtValidationFilter;
 import likelion13th.shop.login.auth.utils.OAuth2SuccessHandler;
@@ -18,6 +16,7 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import static org.springframework.security.config.Customizer.withDefaults;
 
 import java.util.Arrays;
 
@@ -36,17 +35,22 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .anonymous(withDefaults()) // ✅ 익명 접근 보장
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
+                                "/",                // ✅ 루트 허용
+                                "/favicon.ico",     // ✅ 파비콘 허용
+                                "/error",           // ✅ 에러 페이지 허용
                                 "/health",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/users/reissue",
                                 "/users/logout",
-                                "/oauth2/**",          // ✅ 시작 URL 허용
-                                "/login/oauth2/**",    // ✅ 콜백 URL 허용
+                                "/oauth2/**",              // ✅ OAuth2 시작/콜백 허용
+                                "/oauth2/authorization/**",// ✅ 추가 허용
+                                "/login/oauth2/**",
                                 "/categories/**",
                                 "/items/**",
                                 "/token/**"
@@ -56,16 +60,14 @@ public class SecurityConfig {
 
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // ✅ OAuth2 시작/콜백 경로를 스프링에 '공식'으로 알려준다
                 .oauth2Login(oauth -> oauth
-                        .authorizationEndpoint(ep -> ep.baseUri("/oauth2/start"))   // e.g. /oauth2/start/kakao
+                        .authorizationEndpoint(ep -> ep.baseUri("/oauth2/start"))
                         .redirectionEndpoint(ep -> ep.baseUri("/login/oauth2/code/*"))
                         .successHandler(oAuth2SuccessHandler)
                         .userInfoEndpoint(u -> u.userService(oAuth2UserService))
                 )
 
-                // 필터 순서: jwt 검증 → authCreation
-                // [NOTE] 아래 순서는 최종적으로: JwtValidationFilter → AuthCreationFilter → AnonymousAuthenticationFilter
+                // ✅ 필터 순서 유지
                 .addFilterBefore(authCreationFilter, AnonymousAuthenticationFilter.class)
                 .addFilterBefore(jwtValidationFilter, AuthCreationFilter.class);
 
@@ -84,8 +86,8 @@ public class SecurityConfig {
                 "https://valuebid.site"
         ));
         config.addAllowedHeader("*");
-        config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-        config.setExposedHeaders(Arrays.asList("Authorization","Location","Link"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setExposedHeaders(Arrays.asList("Authorization", "Location", "Link"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
