@@ -1,4 +1,5 @@
 package likelion13th.shop.global.config;
+// package likelion13th.shop.global.config;
 
 import likelion13th.shop.login.auth.jwt.AuthCreationFilter;
 import likelion13th.shop.login.auth.jwt.JwtValidationFilter;
@@ -7,12 +8,12 @@ import likelion13th.shop.login.auth.utils.OAuth2UserServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
-import org.springframework.http.HttpMethod;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,59 +32,47 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // === 보안 기본 설정 ===
                 .csrf(AbstractHttpConfigurer::disable)
-                .logout(AbstractHttpConfigurer::disable) // ✅ Spring 기본 /logout 비활성화 (우리 컨트롤러 사용)
-
-                // CORS
+                .logout(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 인가 규칙
                 .authorizeHttpRequests(auth -> auth
-                        // 프리플라이트 허용
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // 공개 엔드포인트
                         .requestMatchers(
                                 "/health",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/users/reissue",
-                                "/users/logout",  // ⛔ 인증 기반 로그아웃이면 permitAll에서 제외
-                                "/oauth2/**",
-                                "/login/oauth2/**",
+                                "/users/logout",
+                                "/oauth2/**",          // ✅ 시작 URL 허용
+                                "/login/oauth2/**",    // ✅ 콜백 URL 허용
                                 "/categories/**",
                                 "/items/**",
                                 "/token/**"
                         ).permitAll()
-
-                        // 그 외는 인증 필요
                         .anyRequest().authenticated()
                 )
 
-                // 세션 비활성화 (JWT)
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // OAuth2 로그인
-                .oauth2Login(oauth2 -> oauth2
+                // ✅ OAuth2 시작/콜백 경로를 스프링에 '공식'으로 알려준다
+                .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(ep -> ep.baseUri("/oauth2/start"))   // e.g. /oauth2/start/kakao
+                        .redirectionEndpoint(ep -> ep.baseUri("/login/oauth2/code/*"))
                         .successHandler(oAuth2SuccessHandler)
-                        .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2UserService))
+                        .userInfoEndpoint(u -> u.userService(oAuth2UserService))
                 )
 
-                // 필터 체인
+                // 필터 순서: jwt 검증 → authCreation
                 .addFilterBefore(authCreationFilter, AnonymousAuthenticationFilter.class)
                 .addFilterBefore(jwtValidationFilter, AuthCreationFilter.class);
 
         return http.build();
     }
 
-    // CORS 설정 Bean
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
         config.setAllowCredentials(true);
         config.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:3000",
@@ -93,8 +82,8 @@ public class SecurityConfig {
                 "https://valuebid.site"
         ));
         config.addAllowedHeader("*");
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setExposedHeaders(Arrays.asList("Authorization", "Location", "Link"));
+        config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        config.setExposedHeaders(Arrays.asList("Authorization","Location","Link"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
