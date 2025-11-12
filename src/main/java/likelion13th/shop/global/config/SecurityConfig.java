@@ -1,4 +1,5 @@
 package likelion13th.shop.global.config;
+
 // package likelion13th.shop.global.config;
 
 import likelion13th.shop.login.auth.jwt.AuthCreationFilter;
@@ -64,6 +65,7 @@ public class SecurityConfig {
                 )
 
                 // 필터 순서: jwt 검증 → authCreation
+                // [NOTE] 아래 순서는 최종적으로: JwtValidationFilter → AuthCreationFilter → AnonymousAuthenticationFilter
                 .addFilterBefore(authCreationFilter, AnonymousAuthenticationFilter.class)
                 .addFilterBefore(jwtValidationFilter, AuthCreationFilter.class);
 
