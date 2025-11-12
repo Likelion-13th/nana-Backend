@@ -1,4 +1,5 @@
 package likelion13th.shop.login.auth.jwt;
+
 // package likelion13th.shop.login.auth.jwt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,7 +45,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
             "/favicon.ico",
             "/",
             // 필요 시 여기에 공개 경로 추가
-            // "/users/logout"  // ← 로그아웃을 공개로 둘 생각이면 여기에 추가
+            // "/users/logout"
     };
 
     @Override
@@ -57,7 +58,11 @@ public class JwtValidationFilter extends OncePerRequestFilter {
 
         // ✅ 공개 경로 패턴은 패스
         for (String p : SKIP_PATHS) {
-            if (PATH.match(p, uri)) return true;
+            if (PATH.match(p, uri)) {
+                // [ADD] 디버깅 로그
+                log.debug("[JwtValidationFilter] SKIP by pattern: {}", p);
+                return true;
+            }
         }
         return false;
     }
@@ -87,6 +92,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // [FIX] "Bearer " 공백 포함 길이 7
         String token = authHeader.substring(7);
 
         try {
