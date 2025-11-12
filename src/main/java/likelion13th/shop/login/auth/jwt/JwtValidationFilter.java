@@ -1,4 +1,5 @@
 package likelion13th.shop.login.auth.jwt;
+// package likelion13th.shop.login.auth.jwt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
@@ -14,11 +15,13 @@ import likelion13th.shop.global.api.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -29,20 +32,34 @@ import java.io.IOException;
 public class JwtValidationFilter extends OncePerRequestFilter {
 
     private final TokenProvider tokenProvider;
+    private static final AntPathMatcher PATH = new AntPathMatcher();
+
+    private static final String[] SKIP_PATHS = new String[] {
+            "/oauth2/**",
+            "/login/oauth2/**",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/health",
+            "/error",
+            "/favicon.ico",
+            "/",
+            // 필요 시 여기에 공개 경로 추가
+            // "/users/logout"  // ← 로그아웃을 공개로 둘 생각이면 여기에 추가
+    };
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String uri = request.getRequestURI();
+        final String uri = request.getRequestURI();
         if (uri == null) return false;
 
-        // ✅ 토큰 검증을 생략할(=비인증) 경로들만 예외로 둔다.
-        return uri.contains("/users/reissue")
-                || uri.contains("/oauth2")
-                || uri.contains("/login/oauth2")
-                || uri.contains("/swagger-ui")
-                || uri.contains("/v3/api-docs")
-                || uri.contains("/health");
-        // ⛔ 로그아웃은 인증 경로이므로 제외하지 않는다.
+        // ✅ 프리플라이트는 무조건 패스
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) return true;
+
+        // ✅ 공개 경로 패턴은 패스
+        for (String p : SKIP_PATHS) {
+            if (PATH.match(p, uri)) return true;
+        }
+        return false;
     }
 
     @Override
@@ -51,9 +68,10 @@ public class JwtValidationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        String uri = request.getRequestURI();
+        final String uri = request.getRequestURI();
         log.debug("[JwtValidationFilter] 요청 URI = {}", uri);
 
+        // 이미 인증되어 있으면 통과
         Authentication existing = SecurityContextHolder.getContext().getAuthentication();
         if (existing != null && existing.isAuthenticated()
                 && !(existing instanceof AnonymousAuthenticationToken)) {
@@ -61,9 +79,10 @@ public class JwtValidationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Authorization 헤더가 없으면 -> 그냥 통과 (인가 여부는 Security 규칙이 처리)
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.warn("[JwtValidationFilter] Authorization 헤더가 없음 또는 잘못된 형식. uri={}", uri);
+            log.debug("[JwtValidationFilter] Authorization 헤더 없음/형식 불일치. uri={}", uri);
             filterChain.doFilter(request, response);
             return;
         }
@@ -75,7 +94,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
             String providerId = claims.getSubject();
 
             if (providerId == null || providerId.isEmpty()) {
-                log.warn("[JwtValidationFilter] providerId가 비어 있음. uri={}", uri);
+                log.warn("[JwtValidationFilter] providerId 비어 있음. uri={}", uri);
                 sendErrorResponse(response, ErrorCode.TOKEN_INVALID);
                 return;
             }
