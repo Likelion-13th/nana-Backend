@@ -49,7 +49,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/users/reissue",
-                                // "/users/logout",  // ⛔ 인증 기반 로그아웃이면 permitAll에서 제외
+                                "/users/logout",  // ⛔ 인증 기반 로그아웃이면 permitAll에서 제외
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/categories/**",
