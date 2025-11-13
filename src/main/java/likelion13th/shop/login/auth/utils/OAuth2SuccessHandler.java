@@ -1,4 +1,4 @@
-package likelion13th.shop.login.auth.handler;
+package likelion13th.shop.login.auth.utils;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
