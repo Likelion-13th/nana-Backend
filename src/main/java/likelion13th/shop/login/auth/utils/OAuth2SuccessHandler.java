@@ -32,11 +32,12 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final JpaUserDetailsManager jpaUserDetailsManager; // Security 사용자 저장/조회 담당
     private final UserService userService;                     // JWT 발급 및 RefreshToken 저장 로직
 
+    // ★ 끝 슬래시 없는 형태로 통일
     private static final List<String> ALLOWED_ORIGINS = List.of(
-            "https://nana-frontend.netlify.app/",
+            "https://nana-frontend.netlify.app",
             "http://localhost:3000"
     );
-    private static final String DEFAULT_FRONT_ORIGIN = "https://nana-frontend.netlify.app/";
+    private static final String DEFAULT_FRONT_ORIGIN = "https://nana-frontend.netlify.app";
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
@@ -74,8 +75,16 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             String frontendRedirectOrigin = (String) request.getSession().getAttribute("FRONT_REDIRECT_URI");
             request.getSession().removeAttribute("FRONT_REDIRECT_URI");
 
+            // ★ 4-1️⃣ 끝에 '/' 붙어 있으면 제거해서 정규화
+            if (frontendRedirectOrigin != null && frontendRedirectOrigin.endsWith("/")) {
+                frontendRedirectOrigin = frontendRedirectOrigin.substring(0, frontendRedirectOrigin.length() - 1);
+            }
+
             // 5️⃣ 화이트리스트 재검증
-            if (frontendRedirectOrigin == null || !ALLOWED_ORIGINS.contains(frontendRedirectOrigin)) {
+            boolean allowed = frontendRedirectOrigin != null &&
+                    ALLOWED_ORIGINS.stream().anyMatch(origin -> origin.equalsIgnoreCase(frontendRedirectOrigin));  // ★ equalsIgnoreCase 사용
+
+            if (!allowed) {
                 frontendRedirectOrigin = DEFAULT_FRONT_ORIGIN;
             }
 
