@@ -13,7 +13,6 @@ import likelion13th.shop.login.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -22,7 +21,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Component
@@ -32,7 +30,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final JpaUserDetailsManager jpaUserDetailsManager; // Security 사용자 저장/조회 담당
     private final UserService userService;                     // JWT 발급 및 RefreshToken 저장 로직
 
-    // ★ 끝 슬래시 없는 형태로 통일
+    // 끝 슬래시 없는 형태로 통일
     private static final List<String> ALLOWED_ORIGINS = List.of(
             "https://nana-frontend.netlify.app",
             "http://localhost:3000"
@@ -44,7 +42,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         try {
             // 1️⃣ providerId, nickname 추출
             DefaultOAuth2User oAuth2User = (DefaultOAuth2User) authentication.getPrincipal();
-            String providerId = String.valueOf(oAuth2User.getAttributes().getOrDefault("provider_id", oAuth2User.getAttributes().get("id")));
+            String providerId = String.valueOf(
+                    oAuth2User.getAttributes().getOrDefault("provider_id", oAuth2User.getAttributes().get("id"))
+            );
             String nickname = (String) oAuth2User.getAttributes().get("nickname");
             log.info("// [OAuth2Success] providerId={}, nickname={}", providerId, nickname);
 
@@ -75,22 +75,38 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             String frontendRedirectOrigin = (String) request.getSession().getAttribute("FRONT_REDIRECT_URI");
             request.getSession().removeAttribute("FRONT_REDIRECT_URI");
 
-            // ★ 4-1️⃣ 끝에 '/' 붙어 있으면 제거해서 정규화
-            if (frontendRedirectOrigin != null && frontendRedirectOrigin.endsWith("/")) {
-                frontendRedirectOrigin = frontendRedirectOrigin.substring(0, frontendRedirectOrigin.length() - 1);
+            // 4-1️⃣ null 방지 + 끝 슬래시 제거해서 정규화
+            String normalizedOrigin = null;
+            if (frontendRedirectOrigin != null) {
+                if (frontendRedirectOrigin.endsWith("/")) {
+                    normalizedOrigin = frontendRedirectOrigin.substring(0, frontendRedirectOrigin.length() - 1);
+                } else {
+                    normalizedOrigin = frontendRedirectOrigin;
+                }
             }
 
-            // 5️⃣ 화이트리스트 재검증
-            boolean allowed = frontendRedirectOrigin != null &&
-                    ALLOWED_ORIGINS.stream().anyMatch(origin -> origin.equalsIgnoreCase(frontendRedirectOrigin));  // ★ equalsIgnoreCase 사용
+            // 5️⃣ 화이트리스트 재검증 (for문으로 간단하게)
+            boolean allowed = false;
+            if (normalizedOrigin != null) {
+                for (String origin : ALLOWED_ORIGINS) {
+                    if (origin.equalsIgnoreCase(normalizedOrigin)) {
+                        allowed = true;
+                        break;
+                    }
+                }
+            }
 
-            if (!allowed) {
-                frontendRedirectOrigin = DEFAULT_FRONT_ORIGIN;
+            // 5-1️⃣ 최종 origin 결정
+            String finalOrigin;
+            if (allowed) {
+                finalOrigin = normalizedOrigin;
+            } else {
+                finalOrigin = DEFAULT_FRONT_ORIGIN;
             }
 
             // 6️⃣ 최종 리다이렉트 URL 생성 (accessToken 포함)
             String redirectUrl = UriComponentsBuilder
-                    .fromUriString(frontendRedirectOrigin)
+                    .fromUriString(finalOrigin)
                     .queryParam("accessToken", URLEncoder.encode(jwt.getAccessToken(), StandardCharsets.UTF_8))
                     .build(true)
                     .toUriString();
