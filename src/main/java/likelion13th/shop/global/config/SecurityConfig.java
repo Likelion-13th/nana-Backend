@@ -2,7 +2,7 @@ package likelion13th.shop.global.config;
 
 import likelion13th.shop.login.auth.jwt.AuthCreationFilter;
 import likelion13th.shop.login.auth.jwt.JwtValidationFilter;
-import likelion13th.shop.login.auth.utils.OAuth2SuccessHandler;
+import likelion13th.shop.login.auth.handler.OAuth2SuccessHandler;
 import likelion13th.shop.login.auth.utils.OAuth2UserServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
