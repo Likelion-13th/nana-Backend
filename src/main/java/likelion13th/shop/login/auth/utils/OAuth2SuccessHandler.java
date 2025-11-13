@@ -13,7 +13,6 @@ import likelion13th.shop.login.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -22,7 +21,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Component
@@ -43,7 +41,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         try {
             // 1️⃣ providerId, nickname 추출
             DefaultOAuth2User oAuth2User = (DefaultOAuth2User) authentication.getPrincipal();
-            String providerId = String.valueOf(oAuth2User.getAttributes().getOrDefault("provider_id", oAuth2User.getAttributes().get("id")));
+            String providerId = String.valueOf(
+                    oAuth2User.getAttributes().getOrDefault("provider_id", oAuth2User.getAttributes().get("id"))
+            );
             String nickname = (String) oAuth2User.getAttributes().get("nickname");
             log.info("// [OAuth2Success] providerId={}, nickname={}", providerId, nickname);
 
@@ -81,7 +81,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
             // 6️⃣ 최종 리다이렉트 URL 생성 (accessToken 포함)
             String redirectUrl = UriComponentsBuilder
-                    .fromUriString(frontendRedirectOrigin)
+                    .fromUriString(finalOrigin)
                     .queryParam("accessToken", URLEncoder.encode(jwt.getAccessToken(), StandardCharsets.UTF_8))
                     .build(true)
                     .toUriString();
