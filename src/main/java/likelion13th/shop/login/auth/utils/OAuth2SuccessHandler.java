@@ -30,6 +30,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final JpaUserDetailsManager jpaUserDetailsManager;
     private final UserService userService;
 
+    // 현재는 사용하지 않지만, 필요하면 추가 검증용으로 유지
     private static final List<String> ALLOWED_ORIGINS = List.of(
             "http://localhost:3000",
             "https://nana-frontend.netlify.app"
@@ -58,7 +59,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                         .deletable(true)
                         .build();
 
-                newUser.setAddress(new Address("10540","경기도 고양시 덕양구 항공대학로 76","한국항공대학교"));
+                newUser.setAddress(new Address("10540", "경기도 고양시 덕양구 항공대학로 76", "한국항공대학교"));
 
                 jpaUserDetailsManager.createUser(new CustomUserDetails(newUser));
                 log.info("신규 회원 생성 완료 = {}", providerId);
@@ -71,8 +72,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             String redirectOrigin = (String) request.getSession().getAttribute("FRONT_REDIRECT_URI");
             request.getSession().removeAttribute("FRONT_REDIRECT_URI");
 
-            // 5. 유효성 검사
-            if (redirectOrigin == null || !ALLOWED_ORIGINS.contains(redirectOrigin)) {
+            // 5. 유효성 검사: 세션에 값이 없을 때만 기본 프론트로
+            if (redirectOrigin == null || redirectOrigin.isBlank()) {
                 redirectOrigin = DEFAULT_FRONT;
             }
 

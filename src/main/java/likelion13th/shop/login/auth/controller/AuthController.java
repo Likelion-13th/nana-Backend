@@ -19,11 +19,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AuthController {
 
+    // ✅ origin 형태로 통일 (끝에 슬래시 없음)
     private static final Set<String> ALLOWED_ORIGINS = Set.of(
-            "https://nana-frontend.netlify.app/",
+            "https://nana-frontend.netlify.app",
             "http://localhost:3000"
     );
-    private static final String DEFAULT_FRONT_ORIGIN = "https://nana-frontend.netlify.app/";
+    private static final String DEFAULT_FRONT_ORIGIN = "https://nana-frontend.netlify.app";
 
     @Operation(summary = "카카오 로그인 시작", description = "redirect_uri를 검증·저장 후 카카오 인가로 리다이렉트합니다.")
     @GetMapping("/start/kakao")
