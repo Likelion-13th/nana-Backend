@@ -1,6 +1,5 @@
 package likelion13th.shop.login.auth.handler;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import likelion13th.shop.domain.Address;
@@ -13,16 +12,15 @@ import likelion13th.shop.login.auth.service.JpaUserDetailsManager;
 import likelion13th.shop.login.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 @Slf4j
 @Component
@@ -32,13 +30,11 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final JpaUserDetailsManager jpaUserDetailsManager;
     private final UserService userService;
 
-    // 필요하면 추가 검사용으로만 사용
-    private static final List<String> ALLOWED_ORIGINS = List.of(
-            "http://localhost:3000",
-            "https://nana-frontend.netlify.app"
-    );
+    // ✅ 환경에서 주입: 로컬이면 localhost:3000, 배포면 nana-frontend.netlify.app
+    // 기본값을 nana-frontend로 설정 (설정 없으면 이걸 씀)
+    @Value("${app.front-url:https://nana-frontend.netlify.app}")
+    private String frontUrl;
 
-    private static final String DEFAULT_FRONT = "https://nana-frontend.netlify.app";
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
@@ -61,8 +57,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                         .deletable(true)
                         .build();
 
-                newUser.setAddress(new Address("10540", "경기도 고양시 덕양구 항공대학로 76", "한국항공대학교"));
-
+                newUser.setAddress(new Address("10540","경기도 고양시 덕양구 항공대학로 76","한국항공대학교"));
                 jpaUserDetailsManager.createUser(new CustomUserDetails(newUser));
                 log.info("신규 회원 생성 완료 = {}", providerId);
             }
@@ -70,33 +65,13 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             // 3. JWT 발급
             JwtDto jwt = userService.jwtMakeSave(providerId);
 
-            // 4. 쿠키에서 redirect_origin 읽기
-            String redirectOrigin = null;
-            Cookie[] cookies = request.getCookies();
-            if (cookies != null) {
-                for (Cookie c : cookies) {
-                    if ("FRONT_REDIRECT_URI".equals(c.getName())) {
-                        redirectOrigin = URLDecoder.decode(c.getValue(), StandardCharsets.UTF_8);
-                        // 한 번 쓰고 삭제
-                        c.setMaxAge(0);
-                        c.setPath("/");
-                        response.addCookie(c);
-                        break;
-                    }
-                }
-            }
+            // 4. 프론트 리다이렉트 URL = 환경에서 받은 frontUrl 하나만 사용
+            String target = (frontUrl == null || frontUrl.isBlank())
+                    ? "https://nana-frontend.netlify.app"
+                    : frontUrl;
 
-            log.info("[OAuth2SuccessHandler] redirectOrigin(from cookie)={}", redirectOrigin);
-
-            // 5. 값이 없으면 기본 프론트로
-            if (redirectOrigin == null || redirectOrigin.isBlank()) {
-                log.info("[OAuth2SuccessHandler] redirectOrigin is null/blank, fallback to DEFAULT_FRONT={}", DEFAULT_FRONT);
-                redirectOrigin = DEFAULT_FRONT;
-            }
-
-            // 6. 최종 URL 생성
             String redirectUrl = UriComponentsBuilder
-                    .fromUriString(redirectOrigin)
+                    .fromUriString(target)
                     .queryParam("accessToken", URLEncoder.encode(jwt.getAccessToken(), StandardCharsets.UTF_8))
                     .build(true)
                     .toUriString();
