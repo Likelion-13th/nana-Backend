@@ -69,13 +69,28 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             JwtDto jwt = userService.jwtMakeSave(providerId);
 
             // 4. 세션에서 redirect_uri 가져오기
-            String redirectOrigin = (String) request.getSession().getAttribute("FRONT_REDIRECT_URI");
-            request.getSession().removeAttribute("FRONT_REDIRECT_URI");
+            //    ★ getSession(false) 로 "기존 세션만" 조회 (새 세션 생성 방지)
+            var session = request.getSession(false);
+            String redirectOrigin = null;
+            String sessionId = null;
+
+            if (session != null) {
+                sessionId = session.getId();
+                redirectOrigin = (String) session.getAttribute("FRONT_REDIRECT_URI");
+                session.removeAttribute("FRONT_REDIRECT_URI");
+            } else {
+                log.info("[OAuth2SuccessHandler] session is null (no existing session)");
+            }
+
+            // ★ 추가 로그: 세션ID와 redirectOrigin 값 확인
+            log.info("[OAuth2SuccessHandler] sessionId={}, redirectOrigin={}", sessionId, redirectOrigin);
 
             // 5. 유효성 검사: 세션에 값이 없을 때만 기본 프론트로
             if (redirectOrigin == null || redirectOrigin.isBlank()) {
+                log.info("[OAuth2SuccessHandler] redirectOrigin is null/blank, fallback to DEFAULT_FRONT={}", DEFAULT_FRONT);
                 redirectOrigin = DEFAULT_FRONT;
             }
+
 
             // 6. 최종 URL 생성
             String redirectUrl = UriComponentsBuilder

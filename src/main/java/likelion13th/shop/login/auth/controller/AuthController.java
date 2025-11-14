@@ -35,6 +35,12 @@ public class AuthController {
     ) throws IOException {
         // // 허용 Origin만 통과(https?://host[:port])
         String safe = pickSafeOrigin(redirectUri, ALLOWED_ORIGINS, DEFAULT_FRONT_ORIGIN);
+
+        // ★ 추가 로그: 원본 redirect_uri, 필터링된 safe, 세션ID 확인
+        var session = request.getSession(true);
+        log.info("[startKakao] rawRedirectUri={}, safeOrigin={}, sessionId={}",
+                redirectUri, safe, session.getId());
+
         request.getSession(true).setAttribute("FRONT_REDIRECT_URI", safe); // // 성공 핸들러에서 회수
         response.sendRedirect("/oauth2/authorization/kakao");              // // 시큐리티 기본 인가 엔드포인트
     }
