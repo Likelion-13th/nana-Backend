@@ -83,6 +83,7 @@ spring:
       default_batch_fetch_size: 1000
 
 ---
+
 # develop profile
 spring:
   config:
