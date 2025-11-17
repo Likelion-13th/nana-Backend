@@ -82,9 +82,10 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 // "아기 사자 백엔드 배포 주소",\
-                "http://sajang-dev-env.eba-cxzcfs22.ap-northeast-2.elasticbeanstalk.com ",
+                "http://sajang-dev-env.eba-cxzcfs22.ap-northeast-2.elasticbeanstalk.com",
                 "https://nana-frontend.netlify.app/"
         ));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
